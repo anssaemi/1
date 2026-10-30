@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>카메라 모션 분리수거 놀이</title>
+  <title>신나는 분리수거 놀이</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 유아 친화 한글 폰트: 주아체 & Pretendard -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@600;800&display=swap" rel="stylesheet">
-  <!-- Google MediaPipe Hands CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
   <style>
     body {
@@ -42,7 +39,7 @@
       position: absolute;
       pointer-events: none;
       animation: starPop 0.8s ease-out forwards;
-      font-size: 28px;
+      font-size: 32px;
       z-index: 50;
     }
 
@@ -62,80 +59,120 @@
 </head>
 <body class="bg-gradient-to-b from-emerald-100 via-teal-50 to-amber-50 min-h-screen text-slate-800 flex flex-col justify-between p-2 sm:p-4">
 
-  <!-- 상단 상태바 -->
-  <header class="w-full max-w-5xl mx-auto flex items-center justify-between bg-white/95 backdrop-blur-md rounded-3xl px-4 py-3 shadow-md border-4 border-emerald-300">
-    <div class="flex items-center gap-2 sm:gap-3">
+  <!-- 상단 상태바 (모드 전환, 타이머, 하트, 점수 통합) -->
+  <header class="w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 bg-white/95 backdrop-blur-md rounded-3xl px-5 py-3 shadow-md border-4 border-emerald-300">
+    <div class="flex items-center gap-3">
       <span class="text-3xl sm:text-4xl">🌱</span>
       <div>
-        <h1 class="text-xl sm:text-2xl text-emerald-800 font-extrabold tracking-wide">신나는 모션 분리수거 놀이</h1>
-        <p id="mode-badge" class="text-xs text-emerald-600 font-sans font-bold flex items-center gap-1">
-          <span id="mode-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-          <span id="mode-text">카메라 준비 중 (마우스/터치로도 가능해요!)</span>
+        <h1 class="text-2xl sm:text-3xl text-emerald-800 font-extrabold tracking-wide">신나는 분리수거 놀이</h1>
+        <p class="text-xs sm:text-sm text-emerald-600 font-sans font-bold flex items-center gap-1.5">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="header-desc">체험모드: 편안하게 쓰레기를 버려보는 연습놀이 🖐️</span>
         </p>
       </div>
     </div>
 
-    <!-- 점수판 및 조작 버튼 -->
-    <div class="flex items-center gap-2 sm:gap-3">
-      <div class="flex items-center gap-1.5 bg-amber-100 px-3 py-1.5 rounded-2xl border-2 border-amber-300 shadow-inner">
-        <span class="text-2xl">⭐</span>
-        <span id="score-display" class="text-xl sm:text-2xl text-amber-800 font-bold">0</span>
+    <!-- 모드 선택 탭 버튼 -->
+    <div class="flex items-center bg-emerald-100 p-1.5 rounded-2xl border-2 border-emerald-300 gap-1.5">
+      <button id="mode-practice-btn" class="px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1">
+        <span>🎈</span><span>체험모드</span>
+      </button>
+      <button id="mode-challenge-btn" class="px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all text-emerald-800 hover:bg-emerald-200/60 flex items-center gap-1">
+        <span>⚡</span><span>도전모드</span>
+      </button>
+    </div>
+
+    <!-- 점수판 및 도전모드 상태창 -->
+    <div class="flex items-center gap-2.5">
+      <!-- 도전모드 전용 타이머 & 하트 (기본 hidden) -->
+      <div id="challenge-status-box" class="hidden flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-2xl border-2 border-rose-300">
+        <!-- 남은 목숨 하트 -->
+        <div id="hearts-container" class="text-xl sm:text-2xl flex tracking-tighter" title="남은 기회">
+          <span>❤️</span><span>❤️</span><span>❤️</span>
+        </div>
+        <!-- 5초 카운트다운 타이머 -->
+        <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-rose-200 shadow-inner">
+          <span class="text-base sm:text-lg">⏱️</span>
+          <span id="timer-display" class="text-lg sm:text-xl font-extrabold text-rose-600 min-w-[42px] text-center">7.0s</span>
+        </div>
       </div>
-      <!-- 새롭게 시작하기 (다시 시작) 버튼 -->
-      <button id="reset-game-btn" title="처음부터 다시 시작해요!" class="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl border-2 border-emerald-300 text-sm font-bold flex items-center gap-1 transition-all active:scale-95 shadow-sm">
-        <span class="text-lg">🔄</span>
+
+      <!-- 점수 디스플레이 -->
+      <div class="flex items-center gap-1.5 bg-amber-100 px-3.5 py-1.5 rounded-2xl border-2 border-amber-300 shadow-inner">
+        <span class="text-2xl">⭐</span>
+        <span id="score-display" class="text-2xl text-amber-900 font-bold min-w-[32px] text-center">0</span>
+      </div>
+
+      <!-- 새로고침 버튼 -->
+      <button id="reset-game-btn" title="처음부터 다시 시작해요!" class="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl border-2 border-emerald-300 text-base font-bold flex items-center gap-1 transition-all active:scale-95 shadow-sm">
+        <span class="text-xl">🔄</span>
         <span class="hidden sm:inline">다시 시작</span>
       </button>
-      <button id="camera-toggle-btn" class="px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 rounded-2xl border-2 border-sky-300 text-sm font-bold flex items-center gap-1 transition-all active:scale-95">
-        <span class="text-lg">📷</span>
-        <span class="hidden sm:inline" id="cam-btn-text">카메라 켜기</span>
-      </button>
-      <button id="sound-btn" class="p-2 sm:px-3 sm:py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-2xl border-2 border-rose-300 text-sm font-bold flex items-center gap-1 transition-all active:scale-95">
-        <span id="sound-icon" class="text-lg">🔔</span>
+      <button id="sound-btn" class="p-2 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-2xl border-2 border-rose-300 text-base font-bold flex items-center gap-1 transition-all active:scale-95 shadow-sm">
+        <span id="sound-icon" class="text-xl">🔔</span>
       </button>
     </div>
   </header>
 
-  <!-- 메인 게임 뷰포트 (카메라 화면 & 캔버스 일체형) -->
-  <main class="w-full max-w-5xl mx-auto my-auto flex flex-col items-center justify-center flex-grow py-2">
+  <!-- 메인 게임 뷰포트 (가로 여백을 채우도록 와이드 확장) -->
+  <main class="w-full max-w-7xl mx-auto my-auto flex flex-col items-center justify-center flex-grow py-2">
     
-    <!-- 유아용 친절 안내 배너 (글씨 크기 확대 및 두께 강화) -->
-    <div id="instruction-pill" class="mb-2 px-6 py-2.5 rounded-full bg-white border-4 border-emerald-400 shadow-md text-base sm:text-2xl text-emerald-900 font-extrabold flex items-center gap-2.5 transition-all">
+    <!-- 유아용 친절 안내 배너 -->
+    <div id="instruction-pill" class="mb-2.5 px-8 py-3 rounded-full bg-white border-4 border-emerald-400 shadow-md text-lg sm:text-2xl text-emerald-900 font-extrabold flex items-center gap-3 transition-all">
       <span class="text-3xl animate-bounce">🖐️</span>
-      <span id="instruction-text">카메라 앞에서 손을 들거나, 화면의 쓰레기를 콕 쥐어보세요!</span>
+      <span id="instruction-text">화면의 쓰레기를 콕 눌러 알맞은 통으로 쏙 넣어보세요!</span>
     </div>
 
-    <!-- 인터랙티브 캔버스 컨테이너 (960x580 고정 비율 리사이즈) -->
-    <div class="relative w-full max-w-4xl aspect-[16/10] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-4 sm:border-8 border-white">
-      <!-- 숨김 처리된 웹캠 비디오 엘리먼트 -->
-      <video id="webcam-video" playsinline class="hidden"></video>
-      
-      <!-- 게임 메인 캔버스 -->
-      <canvas id="game-canvas" width="960" height="600" class="w-full h-full block cursor-pointer"></canvas>
+    <!-- 와이드 인터랙티브 캔버스 컨테이너 (1280x620 와이드 비율) -->
+    <div class="relative w-full max-w-7xl aspect-[16/8] sm:aspect-[16/7.8] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-4 sm:border-8 border-white">
+      <!-- 게임 메인 캔버스 (가로 1280px로 대폭 확장) -->
+      <canvas id="game-canvas" width="1280" height="620" class="w-full h-full block cursor-pointer"></canvas>
 
       <!-- 다시 생각해보세요 토스트 팝업 레이어 -->
-      <div id="wrong-popup" class="hidden absolute top-1/2 left-1/2 pointer-events-none z-40 w-11/12 max-w-md bg-white/95 backdrop-blur-md rounded-3xl border-4 border-amber-400 p-5 shadow-2xl text-center">
-        <div class="text-5xl mb-2 animate-bounce">🤔💡</div>
-        <h3 class="text-2xl font-extrabold text-amber-900 mb-1">다시 한 번 생각해볼까요?</h3>
-        <p id="wrong-popup-desc" class="text-sm sm:text-base font-sans font-bold text-slate-700 leading-snug">
+      <div id="wrong-popup" class="hidden absolute top-1/2 left-1/2 pointer-events-none z-40 w-11/12 max-w-lg bg-white/95 backdrop-blur-md rounded-3xl border-4 border-amber-400 p-6 shadow-2xl text-center">
+        <div class="text-6xl mb-2 animate-bounce">🤔💡</div>
+        <h3 class="text-3xl font-extrabold text-amber-900 mb-1.5">다시 한 번 생각해볼까요?</h3>
+        <p id="wrong-popup-desc" class="text-base sm:text-lg font-sans font-bold text-slate-700 leading-snug">
           힌트를 보고 알맞은 통을 찾아보세요!
         </p>
       </div>
 
-      <!-- 카메라 첫 허용 가이드 안내 레이어 -->
-      <div id="cam-guide-overlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-6 text-center transition-opacity duration-300">
-        <div class="text-6xl mb-3 animate-pulse">✨🤖🖐️</div>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-amber-300 mb-2">손동작으로 즐기는 분리수거!</h2>
-        <p class="text-sm sm:text-base text-slate-100 max-w-md font-sans mb-5 leading-relaxed">
-          카메라를 켜고 <b>손가락을 오므려(주먹 쥐기)</b> 쓰레기를 잡은 뒤,<br>
-          알맞은 통 위에서 <b>손을 쫙 펴면</b> 쏙 들어갑니다!
+      <!-- 도전모드 시작 대기 오버레이 추가 -->
+      <div id="challenge-start-modal" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center p-6 animate-jelly">
+        <div class="text-7xl mb-3 animate-pulse">⚡🏆</div>
+        <h2 class="text-4xl sm:text-5xl font-extrabold text-amber-300 mb-3">도전모드 준비 완료!</h2>
+        <div class="bg-white/10 rounded-2xl p-4 sm:p-5 mb-6 max-w-md text-slate-100 font-sans text-base sm:text-lg leading-relaxed text-left border border-white/20">
+          <p class="mb-2 flex items-center gap-2 font-bold text-amber-300">
+            <span>⏱️</span><span>시작 시간: 7.0초 (10초마다 0.5초씩 감소)</span>
+          </p>
+          <p class="mb-2 flex items-center gap-2 font-bold text-rose-300">
+            <span>❤️</span><span>기회: 총 3번 (오답 또는 시간 초과 시 감소)</span>
+          </p>
+          <p class="flex items-center gap-2 font-bold text-emerald-300">
+            <span>⭐</span><span>바구니별 10점 ~ 35점 차등 보너스 점수!</span>
+          </p>
+        </div>
+        <button id="start-challenge-run-btn" class="px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-3xl text-2xl sm:text-3xl font-extrabold shadow-2xl active:scale-95 transition-transform flex items-center gap-3 border-4 border-white/40">
+          <span>🚀</span><span>도전 시작하기!</span>
+        </button>
+      </div>
+
+      <!-- 도전모드 게임오버 모달창 -->
+      <div id="gameover-modal" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center p-6 animate-jelly">
+        <div class="text-7xl mb-3 animate-bounce">🏁✨</div>
+        <h2 class="text-4xl sm:text-5xl font-extrabold text-amber-300 mb-2">도전 완료! 참 잘했어요!</h2>
+        <p class="text-lg sm:text-2xl text-white font-sans font-bold mb-4">
+          최종 획득 점수: <span id="final-score" class="text-amber-400 text-3xl sm:text-4xl underline">0</span>점!
         </p>
-        <div class="flex flex-wrap gap-3 justify-center">
-          <button id="activate-cam-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform flex items-center gap-2">
-            <span>📷 카메라 켜고 시작</span>
+        <p id="gameover-reason" class="text-rose-200 text-base sm:text-lg font-sans mb-6">
+          기회를 모두 소모했어요. 다음에 다시 도전해볼까요?
+        </p>
+        <div class="flex gap-4">
+          <button id="retry-challenge-btn" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xl font-bold shadow-lg active:scale-95 transition-transform flex items-center gap-2">
+            <span>⚡ 다시 도전하기</span>
           </button>
-          <button id="use-mouse-btn" class="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-bold text-lg backdrop-blur-md active:scale-95 transition-transform">
-            <span>🖱️ 마우스/터치로 먼저 놀기</span>
+          <button id="switch-to-practice-btn" class="px-8 py-3.5 bg-white/20 hover:bg-white/30 text-white rounded-2xl text-xl font-bold backdrop-blur-md active:scale-95 transition-transform flex items-center gap-2">
+            <span>🎈 체험모드로 가기</span>
           </button>
         </div>
       </div>
@@ -143,9 +180,9 @@
   </main>
 
   <!-- 하단 교실 가이드 바 -->
-  <footer class="w-full max-w-5xl mx-auto text-center py-1">
-    <p class="text-xs sm:text-sm text-emerald-800/80 font-sans font-bold">
-      💡 카메라 권한이 차단되었거나 인식이 어려울 때는 화면을 마우스로 클릭하거나 손가락 터치로 끌어다 넣을 수 있습니다.
+  <footer class="w-full max-w-7xl mx-auto text-center py-1">
+    <p id="footer-guide" class="text-xs sm:text-base text-emerald-800/80 font-sans font-bold">
+      💡 전자칠판 화면을 터치하여 쓰레기를 잡고 알맞은 분리수거함으로 끌어다 넣으면 쏙 들어갑니다!
     </p>
   </footer>
 
@@ -172,7 +209,6 @@
         gain.connect(audioCtx.destination);
 
         if (type === 'grab') {
-          // 뽁! 쥐는 효과음
           osc.type = 'sine';
           osc.frequency.setValueAtTime(320, now);
           osc.frequency.exponentialRampToValueAtTime(640, now + 0.08);
@@ -181,7 +217,6 @@
           osc.start(now);
           osc.stop(now + 0.08);
         } else if (type === 'success') {
-          // 도-미-솔-도 맑은 실로폰 성공음
           const freqs = [523.25, 659.25, 783.99, 1046.50];
           freqs.forEach((f, i) => {
             const o = audioCtx.createOscillator();
@@ -196,7 +231,6 @@
             o.stop(now + i * 0.07 + 0.3);
           });
         } else if (type === 'oops') {
-          // 부드러운 갸우뚱 음 (통~통)
           osc.type = 'sine';
           osc.frequency.setValueAtTime(360, now);
           osc.frequency.exponentialRampToValueAtTime(240, now + 0.22);
@@ -204,6 +238,29 @@
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
           osc.start(now);
           osc.stop(now + 0.22);
+        } else if (type === 'timeout') {
+          // 시간 초과 경고음
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'gameover') {
+          const freqs = [440, 392, 349.23, 293.66];
+          freqs.forEach((f, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(f, now + i * 0.12);
+            g.gain.setValueAtTime(0.25, now + i * 0.12);
+            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start(now + i * 0.12);
+            o.stop(now + i * 0.12 + 0.3);
+          });
         }
       } catch (e) {
         console.error(e);
@@ -211,36 +268,56 @@
     }
 
     // ==========================================
-    // 2. 분리수거 데이터 & 게임 요소 정의
+    // 2. 분리수거 데이터 & 게임 요소 정의 (1280px 와이드 전용)
     // ==========================================
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
-    const video = document.getElementById('webcam-video');
     const instructionText = document.getElementById('instruction-text');
-    const modeBadge = document.getElementById('mode-text');
-    const modeDot = document.getElementById('mode-dot');
     const scoreDisplay = document.getElementById('score-display');
-    const camGuideOverlay = document.getElementById('cam-guide-overlay');
     const wrongPopup = document.getElementById('wrong-popup');
     const wrongPopupDesc = document.getElementById('wrong-popup-desc');
     let wrongPopupTimer = null;
 
-    let score = 0;
-    let cameraActive = false;
-    let cameraInstance = null;
-    let handsInstance = null;
+    // 모드 관련 DOM
+    const modePracticeBtn = document.getElementById('mode-practice-btn');
+    const modeChallengeBtn = document.getElementById('mode-challenge-btn');
+    const headerDesc = document.getElementById('header-desc');
+    const challengeStatusBox = document.getElementById('challenge-status-box');
+    const heartsContainer = document.getElementById('hearts-container');
+    const timerDisplay = document.getElementById('timer-display');
+    const gameoverModal = document.getElementById('gameover-modal');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const gameoverReason = document.getElementById('gameover-reason');
+    const retryChallengeBtn = document.getElementById('retry-challenge-btn');
+    const switchToPracticeBtn = document.getElementById('switch-to-practice-btn');
+    const footerGuide = document.getElementById('footer-guide');
+    const challengeStartModal = document.getElementById('challenge-start-modal');
+    const startChallengeRunBtn = document.getElementById('start-challenge-run-btn');
 
-    // 하단 6개 쓰레기통 정의 (종이, 플라스틱, 캔, 유리, 비닐, 일반쓰레기)
+    let currentMode = 'practice'; // 'practice' (체험) | 'challenge' (도전)
+    let score = 0;
+
+    // 도전모드 변수
+    let lives = 3;
+    let baseTimeLimit = 7.0; // 시작 제한시간 7.0초
+    let remainingTime = 7.0;  // 현재 아이템 남은 시간
+    let challengeTotalElapsedTime = 0; // 도전모드 전체 경과시간 (초)
+    let isGameOver = false;
+    let isChallengeRunning = false; // 도전모드 시작 버튼을 눌렀는지 여부
+    let lastTimestamp = 0;
+
+    // 하단 6개 쓰레기통 정의 (쓰레기통 별 5점씩 차등 배점 적용)
+    // 종이(10점), 플라스틱(15점), 캔(20점), 유리(25점), 비닐(30점), 일반(35점)
     const BINS = [
-      { id: 'paper', name: '종이', icon: '📦', color: '#8D6E63', darkColor: '#5D4037', lightColor: '#D7CCC8', x: 20, y: 430, w: 140, h: 155 },
-      { id: 'plastic', name: '플라스틱', icon: '🧴', color: '#1E88E5', darkColor: '#1565C0', lightColor: '#BBDEFB', x: 176, y: 430, w: 140, h: 155 },
-      { id: 'can', name: '캔류', icon: '🥫', color: '#FB8C00', darkColor: '#EF6C00', lightColor: '#FFE0B2', x: 332, y: 430, w: 140, h: 155 },
-      { id: 'glass', name: '유리병', icon: '🍾', color: '#00897B', darkColor: '#00695C', lightColor: '#B2DFDB', x: 488, y: 430, w: 140, h: 155 },
-      { id: 'vinyl', name: '비닐류', icon: '🛍️', color: '#8E24AA', darkColor: '#6A1B9A', lightColor: '#E1BEE7', x: 644, y: 430, w: 140, h: 155 },
-      { id: 'trash', name: '일반쓰레기', icon: '🗑️', color: '#546E7A', darkColor: '#37474F', lightColor: '#CFD8DC', x: 800, y: 430, w: 140, h: 155 }
+      { id: 'paper', name: '종이', icon: '📦', points: 10, color: '#8D6E63', darkColor: '#5D4037', lightColor: '#D7CCC8', x: 24, y: 440, w: 185, h: 160 },
+      { id: 'plastic', name: '플라스틱', icon: '🧴', points: 15, color: '#1E88E5', darkColor: '#1565C0', lightColor: '#BBDEFB', x: 233, y: 440, w: 185, h: 160 },
+      { id: 'can', name: '캔류', icon: '🥫', points: 20, color: '#FB8C00', darkColor: '#EF6C00', lightColor: '#FFE0B2', x: 442, y: 440, w: 185, h: 160 },
+      { id: 'glass', name: '유리병', icon: '🍾', points: 25, color: '#00897B', darkColor: '#00695C', lightColor: '#B2DFDB', x: 651, y: 440, w: 185, h: 160 },
+      { id: 'vinyl', name: '비닐류', icon: '🛍️', points: 30, color: '#8E24AA', darkColor: '#6A1B9A', lightColor: '#E1BEE7', x: 860, y: 440, w: 185, h: 160 },
+      { id: 'trash', name: '일반쓰레기', icon: '🗑️', points: 35, color: '#546E7A', darkColor: '#37474F', lightColor: '#CFD8DC', x: 1069, y: 440, w: 185, h: 160 }
     ];
 
-    // 유아용 쓰레기 아이템 풀 (총 20가지 아이템 및 교육용 함정 포함)
+    // 유아용 쓰레기 아이템 풀 (총 20가지)
     const ITEMS_POOL = [
       // [1. 종이류 - 3종]
       { name: '깨끗한 신문지', category: 'paper', emoji: '📰', graphicId: 'newspaper', isTrap: false, tip: '신문지는 차곡차곡 종이 통으로!' },
@@ -310,12 +387,10 @@
       }
     ];
 
-    // 순차 순환용 덱(Deck) 배열 및 인덱스 관리
     let sequenceQueue = [];
     let currentSequenceIndex = 0;
 
     function refillSequenceQueue() {
-      // 20종 전체 목록을 복사 후 다양한 카테고리가 번갈아 나오도록 균등 셔플
       sequenceQueue = [...ITEMS_POOL];
       for (let i = sequenceQueue.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -324,17 +399,86 @@
       currentSequenceIndex = 0;
     }
 
-    // 게임 전체 다시 시작 (점수 및 큐 초기화)
+    function setMode(mode) {
+      currentMode = mode;
+      isGameOver = false;
+      gameoverModal.classList.add('hidden');
+
+      if (mode === 'practice') {
+        isChallengeRunning = false;
+        challengeStartModal.classList.add('hidden');
+        modePracticeBtn.className = "px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1";
+        modeChallengeBtn.className = "px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all text-emerald-800 hover:bg-emerald-200/60 flex items-center gap-1";
+        challengeStatusBox.classList.add('hidden');
+        headerDesc.textContent = "체험모드: 편안하게 쓰레기를 버려보는 연습놀이 🖐️";
+        footerGuide.textContent = "💡 체험모드: 시간에 쫓기지 않고 20가지 쓰레기를 자유롭게 연습해보세요!";
+        restartGame();
+      } else {
+        modeChallengeBtn.className = "px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all bg-rose-600 text-white shadow-sm flex items-center gap-1";
+        modePracticeBtn.className = "px-3.5 py-1.5 rounded-xl font-bold text-sm sm:text-base transition-all text-emerald-800 hover:bg-emerald-200/60 flex items-center gap-1";
+        challengeStatusBox.classList.remove('hidden');
+        headerDesc.textContent = "도전모드: 7초 안에 알맞은 통에 쏙! 기회 3번 ⚡";
+        footerGuide.textContent = "⚡ 도전모드: 10초마다 제한시간이 0.5초씩 줄어듭니다! (최종 2.5초) 통마다 점수가 달라요!";
+        prepareChallenge();
+      }
+    }
+
+    function prepareChallenge() {
+      score = 0;
+      scoreDisplay.textContent = score;
+      isGameOver = false;
+      isChallengeRunning = false;
+      gameoverModal.classList.add('hidden');
+      lives = 3;
+      updateHeartsDisplay();
+      challengeTotalElapsedTime = 0;
+      baseTimeLimit = 7.0;
+      remainingTime = baseTimeLimit;
+      timerDisplay.textContent = `${remainingTime.toFixed(1)}s`;
+      timerDisplay.classList.remove('text-rose-600', 'animate-pulse');
+      timerDisplay.classList.add('text-slate-800');
+
+      // 시작 대기 오버레이 표시
+      challengeStartModal.classList.remove('hidden');
+      setInstruction('⚡ 도전모드! 아래 [도전 시작하기!] 버튼을 눌러 시작하세요!');
+    }
+
+    function startChallengeActual() {
+      initAudio();
+      challengeStartModal.classList.add('hidden');
+      isChallengeRunning = true;
+      refillSequenceQueue();
+      spawnNextItem();
+      playSound('grab');
+    }
+
+    function updateHeartsDisplay() {
+      let heartsHtml = '';
+      for (let i = 0; i < 3; i++) {
+        heartsHtml += i < lives ? '<span>❤️</span>' : '<span class="opacity-30 grayscale">💔</span>';
+      }
+      heartsContainer.innerHTML = heartsHtml;
+    }
+
     function restartGame() {
       score = 0;
       scoreDisplay.textContent = score;
+      isGameOver = false;
+      gameoverModal.classList.add('hidden');
+
+      if (currentMode === 'challenge') {
+        prepareChallenge();
+        return;
+      }
+
       refillSequenceQueue();
       spawnNextItem();
       playSound('success');
-      setInstruction('🌱 새로운 분리수거 놀이를 시작합니다! 첫 번째 쓰레기를 분류해 보세요!');
+
+      setInstruction('🌱 체험모드 시작! 쓰레기를 천천히 바구니에 넣어보세요!');
     }
 
-    // 현재 쓰레기 상태
+    // 와이드 중앙 x: 640, y: 190
     let currentItem = {
       name: '깨끗한 신문지',
       category: 'paper',
@@ -342,51 +486,67 @@
       graphicId: 'newspaper',
       isTrap: false,
       tip: '신문지는 차곡차곡 종이 통으로!',
-      x: 480,
+      x: 640,
       y: 190,
-      radius: 74,
+      radius: 76,
       isHeld: false,
-      targetX: 480,
+      targetX: 640,
       targetY: 190
     };
 
-    // 포인터 상태 (카메라 손동작 또는 마우스/터치)
     let pointer = {
-      x: 480,
-      y: 300,
+      x: 640,
+      y: 190,
       isGrabbing: false,
-      visible: false,
-      source: 'none' // 'hand' or 'mouse'
+      visible: false
     };
 
-    // ==========================================
-    // 3. 쓰레기 생성 및 이동 로직
-    // ==========================================
     function spawnNextItem() {
-      // 큐가 비었거나 끝까지 도달했으면 새 세트로 순환 충전
-      if (sequenceQueue.length === 0 || currentSequenceIndex >= sequenceQueue.length) {
-        refillSequenceQueue();
+      if (currentMode === 'challenge') {
+        // 10초마다 제한시간 0.5초씩 감소 (최종 2.5초까지)
+        const reductions = Math.floor(challengeTotalElapsedTime / 10);
+        baseTimeLimit = Math.max(2.5, 7.0 - reductions * 0.5);
+        remainingTime = baseTimeLimit;
       }
 
-      // 중복 없이 순서대로 1개씩 꺼내기
-      const pick = sequenceQueue[currentSequenceIndex];
-      const stepNumber = currentSequenceIndex + 1;
-      currentSequenceIndex++;
+      if (currentMode === 'practice') {
+        // 체험모드: 순환 덱 방식
+        if (sequenceQueue.length === 0 || currentSequenceIndex >= sequenceQueue.length) {
+          refillSequenceQueue();
+        }
+        const pick = sequenceQueue[currentSequenceIndex];
+        const stepNumber = currentSequenceIndex + 1;
+        currentSequenceIndex++;
 
-      currentItem = {
-        ...pick,
-        x: 480,
-        y: 190,
-        radius: 74,
-        isHeld: false,
-        targetX: 480,
-        targetY: 190
-      };
-      
-      if (currentItem.isTrap) {
-        setInstruction(`[${stepNumber}/20] 🚨 조심하세요! "${currentItem.name}" 등장! 어디로 가야 할까요? 🤔`);
+        currentItem = {
+          ...pick,
+          x: 640,
+          y: 190,
+          radius: 76,
+          isHeld: false,
+          targetX: 640,
+          targetY: 190
+        };
+
+        if (currentItem.isTrap) {
+          setInstruction(`[${stepNumber}/20] 🚨 조심하세요! "${currentItem.name}" 등장! 어디로 가야 할까요? 🤔`);
+        } else {
+          setInstruction(`[${stepNumber}/20] 새 친구 "${currentItem.name}" 등장! 알맞은 통에 넣어주세요! ✨`);
+        }
       } else {
-        setInstruction(`[${stepNumber}/20] 새 친구 "${currentItem.name}" 등장! 어디로 보내줄까요? ✨`);
+        // 도전모드: 무작위 빠른 출현
+        const pick = ITEMS_POOL[Math.floor(Math.random() * ITEMS_POOL.length)];
+        currentItem = {
+          ...pick,
+          x: 640,
+          y: 190,
+          radius: 76,
+          isHeld: false,
+          targetX: 640,
+          targetY: 190
+        };
+
+        setInstruction(`⚡ "${currentItem.name}" 발견! ${baseTimeLimit.toFixed(1)}초 안에 쏙!`);
       }
     }
 
@@ -394,62 +554,84 @@
       instructionText.textContent = msg;
     }
 
-    // 바구니 투입 검사
     function checkBinDrop() {
       let enteredBin = null;
       BINS.forEach(bin => {
         if (currentItem.x >= bin.x && currentItem.x <= bin.x + bin.w &&
-            currentItem.y >= bin.y && currentItem.y <= bin.y + bin.h) {
+            currentItem.y >= bin.y - 20 && currentItem.y <= bin.y + bin.h + 20) {
           enteredBin = bin;
         }
       });
 
       if (enteredBin) {
         if (enteredBin.id === currentItem.category) {
-          // 정답 처리!
-          playSound('success');
-          score++;
+          // 정답 처리 (쓰레기통별 5점 차등 배점 적용)
+          const earnedPoints = enteredBin.points;
+          score += earnedPoints;
           scoreDisplay.textContent = score;
+          playSound('success');
 
-          if (currentItem.isTrap) {
-            setInstruction(`우와! 정답이에요! 💡 "${currentItem.name}"은(는) 오염되어 [일반쓰레기]가 맞아요! 최고! 👏`);
+          if (currentMode === 'challenge') {
+            setInstruction(`딩동댕! 🌟 +${earnedPoints}점 획득! 대단해요! 👏`);
           } else {
-            setInstruction(`딩동댕! 🌟 "${currentItem.name}" 분리수거 대성공!`);
+            if (currentItem.isTrap) {
+              setInstruction(`우와! 정답이에요! 💡 "${currentItem.name}"은(는) [일반쓰레기]가 맞아요! (+${earnedPoints}점) 👏`);
+            } else {
+              setInstruction(`딩동댕! 🌟 "${currentItem.name}" 분리수거 대성공! (+${earnedPoints}점)`);
+            }
           }
 
-          // 해당 쓰레기통 상단에서 화려한 폭죽 발사!
           createBinFireworks(enteredBin);
           spawnNextItem();
         } else {
-          // 오답 및 함정 피드백!
+          // 오답 처리
           playSound('oops');
           const hintMsg = currentItem.isTrap ? currentItem.trapNotice : `${currentItem.name}은(는) 여기가 아니에요! ${currentItem.tip}`;
-          if (currentItem.isTrap) {
-            setInstruction(`앗! 속았지요? 😲 ${currentItem.trapNotice}`);
-          } else {
-            setInstruction(`앗! "${currentItem.name}"은(는) 거기가 아니에요! ${currentItem.tip} 🌱`);
-          }
-          
-          // 팝업 안내창 살짝 띄우기
           showWrongPopup(hintMsg);
-
-          // 중앙 복귀 애니메이션
-          currentItem.targetX = 480;
+          currentItem.targetX = 640;
           currentItem.targetY = 190;
+
+          if (currentMode === 'challenge') {
+            handleChallengePenalty('오답을 넣었어요! 기회가 1번 줄어들었습니다. 💔');
+          } else {
+            if (currentItem.isTrap) {
+              setInstruction(`앗! 속았지요? 😲 ${currentItem.trapNotice}`);
+            } else {
+              setInstruction(`앗! "${currentItem.name}"은(는) 거기가 아니에요! ${currentItem.tip} 🌱`);
+            }
+          }
         }
       } else {
-        // 허공에 놓았을 때 복귀
-        currentItem.targetX = 480;
+        currentItem.targetX = 640;
         currentItem.targetY = 190;
       }
     }
 
-    // "다시 생각해보세요" 팝업 표시
+    function handleChallengePenalty(reasonText) {
+      lives--;
+      updateHeartsDisplay();
+
+      if (lives <= 0) {
+        triggerGameOver(reasonText);
+      } else {
+        setInstruction(`🚨 ${reasonText} (남은 기회: ${lives}번)`);
+        spawnNextItem();
+      }
+    }
+
+    function triggerGameOver(reasonText) {
+      isGameOver = true;
+      currentItem.isHeld = false;
+      playSound('gameover');
+      finalScoreDisplay.textContent = score;
+      gameoverReason.textContent = reasonText;
+      gameoverModal.classList.remove('hidden');
+    }
+
     function showWrongPopup(msg) {
       if (wrongPopupTimer) clearTimeout(wrongPopupTimer);
       wrongPopupDesc.textContent = msg;
       wrongPopup.classList.remove('hidden', 'wrong-popup-anim');
-      // Reflow 강제 트리거 후 애니메이션 재생
       void wrongPopup.offsetWidth;
       wrongPopup.classList.add('wrong-popup-anim');
 
@@ -459,30 +641,27 @@
       }, 1800);
     }
 
-    // 쓰레기통 폭죽 & 색종이 효과
     function createBinFireworks(bin) {
       const container = canvas.parentElement;
       const rect = canvas.getBoundingClientRect();
       const scaleX = rect.width / canvas.width;
       const scaleY = rect.height / canvas.height;
 
-      // 쓰레기통 뚜껑 중심 좌표 계산
       const originX = (bin.x + bin.w / 2) * scaleX;
       const originY = (bin.y + 10) * scaleY;
 
       const confettiColors = ['#FF1744', '#FFEA00', '#00E676', '#00B0FF', '#D500F9', '#FF9100'];
       const symbols = ['⭐', '✨', '🎉', '🎊', '💫', '🎈'];
 
-      // 1. 별 & 이모지 폭죽 (12개)
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 14; i++) {
         const p = document.createElement('div');
         p.className = 'pop-star';
         p.textContent = symbols[Math.floor(Math.random() * symbols.length)];
         p.style.left = `${originX}px`;
         p.style.top = `${originY}px`;
 
-        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5; // 위쪽 부채꼴 방향
-        const dist = 70 + Math.random() * 110;
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+        const dist = 80 + Math.random() * 120;
         p.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
         p.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
 
@@ -490,22 +669,21 @@
         setTimeout(() => p.remove(), 800);
       }
 
-      // 2. 사각 색종이 폭죽 조각 (18개)
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < 20; i++) {
         const piece = document.createElement('div');
         piece.style.position = 'absolute';
         piece.style.pointerEvents = 'none';
         piece.style.zIndex = '45';
         piece.style.left = `${originX}px`;
         piece.style.top = `${originY}px`;
-        piece.style.width = `${6 + Math.random() * 8}px`;
-        piece.style.height = `${8 + Math.random() * 12}px`;
+        piece.style.width = `${7 + Math.random() * 8}px`;
+        piece.style.height = `${9 + Math.random() * 12}px`;
         piece.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
         piece.style.borderRadius = '3px';
         piece.style.transform = 'translate(-50%, -50%)';
 
         const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.8;
-        const velocity = 80 + Math.random() * 120;
+        const velocity = 90 + Math.random() * 130;
         const targetX = Math.cos(angle) * velocity;
         const targetY = Math.sin(angle) * velocity + 20;
 
@@ -522,126 +700,7 @@
     }
 
     // ==========================================
-    // 4. MediaPipe Hands 카메라 연동
-    // ==========================================
-    async function startCamera() {
-      try {
-        camGuideOverlay.style.opacity = '0';
-        setTimeout(() => camGuideOverlay.classList.add('hidden'), 300);
-
-        modeBadge.textContent = "웹캠 인식 중 🖐️ (화면에 손을 보여주세요!)";
-        modeDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-        document.getElementById('cam-btn-text').textContent = "카메라 끄기";
-
-        handsInstance = new Hands({
-          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        handsInstance.setOptions({
-          maxNumHands: 1, // 유아 1명 집중 모드
-          modelComplexity: 1,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6
-        });
-
-        handsInstance.onResults(onHandResults);
-
-        cameraInstance = new Camera(video, {
-          onFrame: async () => {
-            if (cameraActive) {
-              await handsInstance.send({ image: video });
-            }
-          },
-          width: 960,
-          height: 600
-        });
-
-        await cameraInstance.start();
-        cameraActive = true;
-      } catch (err) {
-        console.warn("카메라 접근 불가 또는 거부됨:", err);
-        modeBadge.textContent = "마우스 / 화면 터치 모드로 동작 중입니다 😊";
-        modeDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-sky-500";
-        camGuideOverlay.classList.add('hidden');
-      }
-    }
-
-    function stopCamera() {
-      if (cameraInstance) {
-        cameraInstance.stop();
-        cameraInstance = null;
-      }
-      cameraActive = false;
-      document.getElementById('cam-btn-text').textContent = "카메라 켜기";
-      modeBadge.textContent = "마우스 / 화면 터치 모드";
-      modeDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-sky-500";
-    }
-
-    // MediaPipe 결과 처리 (거울 반전 & 엄지-검지 핀치 감지)
-    function onHandResults(results) {
-      if (!cameraActive) return;
-
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
-        const indexTip = landmarks[8];
-        const thumbTip = landmarks[4];
-
-        // 거울 모드 (x축 반전: 1 - x)
-        pointer.x = (1 - indexTip.x) * canvas.width;
-        pointer.y = indexTip.y * canvas.height;
-        pointer.visible = true;
-        pointer.source = 'hand';
-
-        // 엄지와 검지 사이 거리 계산
-        const dx = (thumbTip.x - indexTip.x) * canvas.width;
-        const dy = (thumbTip.y - indexTip.y) * canvas.height;
-        const pinchDistance = Math.hypot(dx, dy);
-
-        // 간격 65px 미만이면 주먹/집기 상태
-        const previouslyGrabbing = pointer.isGrabbing;
-        pointer.isGrabbing = pinchDistance < 65;
-
-        handlePointerGrab(previouslyGrabbing);
-      } else {
-        // 손이 화면 밖으로 나감
-        if (pointer.source === 'hand') {
-          if (currentItem.isHeld) {
-            currentItem.isHeld = false;
-            checkBinDrop();
-          }
-          pointer.visible = false;
-        }
-      }
-    }
-
-    // 잡기 / 놓기 공통 처리
-    function handlePointerGrab(previouslyGrabbing) {
-      const distToItem = Math.hypot(pointer.x - currentItem.x, pointer.y - currentItem.y);
-
-      // 1. 물건 잡기
-      if (!previouslyGrabbing && pointer.isGrabbing) {
-        if (distToItem < currentItem.radius + 35) {
-          currentItem.isHeld = true;
-          playSound('grab');
-          setInstruction(`"${currentItem.name}" 꽉 쥐었어요! 알맞은 바구니로 가볼까요?`);
-        }
-      }
-
-      // 2. 쥐고 있는 동안 추적
-      if (currentItem.isHeld && pointer.isGrabbing) {
-        currentItem.x += (pointer.x - currentItem.x) * 0.45;
-        currentItem.y += (pointer.y - currentItem.y) * 0.45;
-      }
-
-      // 3. 손을 폈을 때 (놓기)
-      if (previouslyGrabbing && !pointer.isGrabbing && currentItem.isHeld) {
-        currentItem.isHeld = false;
-        checkBinDrop();
-      }
-    }
-
-    // ==========================================
-    // 5. 마우스 및 스마트보드 터치 폴백
+    // 3. 마우스 및 스마트보드 터치 조작 이벤트
     // ==========================================
     function getCanvasCoords(e) {
       const rect = canvas.getBoundingClientRect();
@@ -654,22 +713,27 @@
     }
 
     function onPointerDown(e) {
+      if (isGameOver || (currentMode === 'challenge' && !isChallengeRunning)) return;
+      initAudio();
       const pos = getCanvasCoords(e);
       pointer.x = pos.x;
       pointer.y = pos.y;
       pointer.visible = true;
-      pointer.source = 'mouse';
-      const prev = pointer.isGrabbing;
       pointer.isGrabbing = true;
-      handlePointerGrab(prev);
+
+      const dist = Math.hypot(pos.x - currentItem.x, pos.y - currentItem.y);
+      if (dist < currentItem.radius + 35) {
+        currentItem.isHeld = true;
+        playSound('grab');
+        setInstruction(`"${currentItem.name}" 꽉 쥐었어요! 알맞은 통으로 끌고 가보세요! 🚀`);
+      }
     }
 
     function onPointerMove(e) {
-      if (pointer.source === 'hand') return; // 카메라가 제어 중일 때는 마우스 무시
+      if (isGameOver || (currentMode === 'challenge' && !isChallengeRunning)) return;
       const pos = getCanvasCoords(e);
       pointer.x = pos.x;
       pointer.y = pos.y;
-      pointer.visible = true;
       if (currentItem.isHeld) {
         currentItem.x = pos.x;
         currentItem.y = pos.y;
@@ -677,10 +741,12 @@
     }
 
     function onPointerUp(e) {
-      if (pointer.source === 'hand') return;
-      const prev = pointer.isGrabbing;
+      if (isGameOver || (currentMode === 'challenge' && !isChallengeRunning)) return;
       pointer.isGrabbing = false;
-      handlePointerGrab(prev);
+      if (currentItem.isHeld) {
+        currentItem.isHeld = false;
+        checkBinDrop();
+      }
     }
 
     canvas.addEventListener('mousedown', onPointerDown);
@@ -692,47 +758,90 @@
     window.addEventListener('touchend', (e) => { onPointerUp(e); });
 
     // ==========================================
-    // 6. 메인 애니메이션 렌더링 루프
+    // 4. 메인 애니메이션 & 타이머 렌더링 루프 (1280x620)
     // ==========================================
-    function renderLoop() {
-      // (A) 비디오 배경 or 가상 배경 그리기
-      if (cameraActive && video.readyState >= 2) {
-        ctx.save();
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1); // 거울 모드 반전
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    function renderLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const deltaSec = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
 
-        // 유아 사물 인지 향상을 위한 밝고 부드러운 화이트 틴트
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-      } else {
-        // 카메라 미사용 시 은은한 교실 잔디밭 그라데이션
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bgGrad.addColorStop(0, '#E8F5E9');
-        bgGrad.addColorStop(0.7, '#C8E6C9');
-        bgGrad.addColorStop(1, '#A5D6A7');
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // 도전모드 타이머 계산 (게임 진행 중이고 시작 버튼을 눌렀을 때만)
+      if (currentMode === 'challenge' && !isGameOver && isChallengeRunning) {
+        challengeTotalElapsedTime += deltaSec;
+        remainingTime -= deltaSec;
 
-        // 칠판 가이드 선
-        ctx.strokeStyle = 'rgba(46, 125, 50, 0.15)';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([8, 8]);
-        ctx.strokeRect(20, 20, canvas.width - 40, 360);
-        ctx.setLineDash([]);
+        if (remainingTime <= 0) {
+          remainingTime = 0;
+          timerDisplay.textContent = '0.0s';
+          playSound('timeout');
+          handleChallengePenalty(`시간 초과! 제한시간 안에 넣지 못했어요! ⌛`);
+        } else {
+          timerDisplay.textContent = `${remainingTime.toFixed(1)}s`;
+          if (remainingTime <= 2.0) {
+            timerDisplay.classList.add('text-rose-600', 'animate-pulse');
+            timerDisplay.classList.remove('text-slate-800');
+          } else {
+            timerDisplay.classList.remove('text-rose-600', 'animate-pulse');
+            timerDisplay.classList.add('text-slate-800');
+          }
+        }
       }
 
-      // (B) 하단 분리수거 쓰레기통 6개 렌더링 (리얼한 쓰레기통 디자인)
-      BINS.forEach(bin => {
-        // 호버/접근 하이라이트
-        const isHovered = currentItem.isHeld &&
-          currentItem.x >= bin.x && currentItem.x <= bin.x + bin.w &&
-          currentItem.y >= bin.y && currentItem.y <= bin.y + bin.h;
+      // (A) 시원하고 넓은 잔디밭 교실 배경
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      if (currentMode === 'challenge') {
+        bgGrad.addColorStop(0, '#FFF3E0');
+        bgGrad.addColorStop(0.6, '#FFE0B2');
+        bgGrad.addColorStop(1, '#FFCC80');
+      } else {
+        bgGrad.addColorStop(0, '#E8F5E9');
+        bgGrad.addColorStop(0.6, '#C8E6C9');
+        bgGrad.addColorStop(1, '#A5D6A7');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 교실 칠판 느낌의 부드러운 가이드 대시보드 선
+      ctx.strokeStyle = currentMode === 'challenge' ? 'rgba(230, 81, 0, 0.22)' : 'rgba(46, 125, 50, 0.18)';
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([10, 10]);
+      ctx.strokeRect(20, 20, canvas.width - 40, 390);
+      ctx.setLineDash([]);
+
+      // 도전모드 상단 타이머 게이지 바 렌더링
+      if (currentMode === 'challenge' && !isGameOver) {
+        const gaugeW = 440;
+        const gaugeH = 16;
+        const gaugeX = (canvas.width - gaugeW) / 2;
+        const gaugeY = 32;
+        const progress = Math.max(0, Math.min(1, remainingTime / baseTimeLimit));
 
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.beginPath();
+        ctx.roundRect(gaugeX, gaugeY, gaugeW, gaugeH, 8);
+        ctx.fill();
+
+        ctx.fillStyle = progress > 0.4 ? '#43A047' : (progress > 0.2 ? '#FB8C00' : '#E53935');
+        ctx.beginPath();
+        ctx.roundRect(gaugeX, gaugeY, gaugeW * progress, gaugeH, 8);
+        ctx.fill();
+
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(gaugeX, gaugeY, gaugeW, gaugeH);
+        ctx.restore();
+      }
+
+      // (B) 하단 분리수거 쓰레기통 6개 렌더링 (차등 점수 배지 표시)
+      BINS.forEach(bin => {
+        const isHovered = currentItem.isHeld &&
+          currentItem.x >= bin.x && currentItem.x <= bin.x + bin.w &&
+          currentItem.y >= bin.y - 20 && currentItem.y <= bin.y + bin.h + 20;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.22)';
+        ctx.shadowBlur = isHovered ? 18 : 10;
         ctx.shadowOffsetY = 6;
 
         const bodyX = bin.x + 8;
@@ -740,24 +849,23 @@
         const bodyW = bin.w - 16;
         const bodyH = bin.h - 24;
 
-        // 1. 쓰레기통 본체 (아래로 살짝 좁아지는 원통 사다리꼴)
+        // 1. 쓰레기통 본체
         ctx.fillStyle = isHovered ? bin.lightColor : bin.color;
         ctx.beginPath();
         ctx.moveTo(bodyX, bodyY);
         ctx.lineTo(bodyX + bodyW, bodyY);
-        ctx.lineTo(bodyX + bodyW - 8, bodyY + bodyH - 10);
-        ctx.quadraticCurveTo(bodyX + bodyW / 2, bodyY + bodyH, bodyX + 8, bodyY + bodyH - 10);
+        ctx.lineTo(bodyX + bodyW - 10, bodyY + bodyH - 10);
+        ctx.quadraticCurveTo(bodyX + bodyW / 2, bodyY + bodyH, bodyX + 10, bodyY + bodyH - 10);
         ctx.closePath();
         ctx.fill();
 
-        // 본체 테두리
-        ctx.lineWidth = isHovered ? 5 : 3.5;
+        ctx.lineWidth = isHovered ? 5.5 : 3.5;
         ctx.strokeStyle = isHovered ? '#FFD54F' : '#FFFFFF';
         ctx.stroke();
 
-        // 2. 입체감을 주는 본체 세로 리브(주름선 2개)
+        // 2. 세로 입체 주름선 2개
         ctx.strokeStyle = isHovered ? 'rgba(0,0,0,0.1)' : bin.darkColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.moveTo(bodyX + bodyW * 0.33, bodyY + 12);
         ctx.lineTo(bodyX + bodyW * 0.35, bodyY + bodyH - 18);
@@ -768,16 +876,16 @@
         // 3. 쓰레기통 뚜껑 림(Lip)
         ctx.fillStyle = isHovered ? '#FFF59D' : bin.darkColor;
         ctx.beginPath();
-        ctx.roundRect(bin.x, bin.y + 8, bin.w, 16, 8);
+        ctx.roundRect(bin.x, bin.y + 8, bin.w, 18, 9);
         ctx.fill();
         ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#FFFFFF';
         ctx.stroke();
 
-        // 4. 뚜껑 상단 손잡이 (반원 링)
+        // 4. 뚜껑 손잡이
         ctx.fillStyle = bin.darkColor;
         ctx.beginPath();
-        ctx.roundRect(bin.x + bin.w / 2 - 18, bin.y, 36, 10, 5);
+        ctx.roundRect(bin.x + bin.w / 2 - 20, bin.y, 40, 11, 5);
         ctx.fill();
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#FFFFFF';
@@ -785,94 +893,84 @@
 
         ctx.restore();
 
-        // 5. 쓰레기통 이모지 및 라벨 텍스트 (글씨 및 아이콘 크기 대폭 확대)
+        // 5. 쓰레기통 아이콘 및 라벨
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = '40px sans-serif';
-        ctx.fillText(bin.icon, bin.x + bin.w / 2, bodyY + 40);
+        ctx.font = '38px sans-serif';
+        ctx.fillText(bin.icon, bin.x + bin.w / 2, bodyY + 36);
 
         ctx.fillStyle = '#FFFFFF';
         ctx.font = '800 23px "Jua", sans-serif';
-        ctx.fillText(bin.name, bin.x + bin.w / 2, bodyY + 86);
+        ctx.fillText(bin.name, bin.x + bin.w / 2, bodyY + 80);
+
+        // 6. 점수 표시 태그 알약 (+10점, +15점 ... +35점)
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.strokeStyle = bin.darkColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(bin.x + bin.w / 2 - 38, bodyY + 98, 76, 24, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = bin.darkColor;
+        ctx.font = 'bold 16px "Jua", sans-serif';
+        ctx.fillText(`+${bin.points}점`, bin.x + bin.w / 2, bodyY + 110);
+        ctx.restore();
 
         if (isHovered) {
           ctx.font = 'bold 15px "Jua", sans-serif';
           ctx.fillStyle = '#1B5E20';
-          ctx.fillText('손 펴기! 🖐️', bin.x + bin.w / 2, bodyY + 114);
+          ctx.fillText('손 떼기! 쏙! ✨', bin.x + bin.w / 2, bodyY + 130);
         }
       });
 
       // (C) 쓰레기 아이템 애니메이션 & 렌더링
-      if (!currentItem.isHeld) {
-        // 부드럽게 제자리로 이동
-        currentItem.x += (currentItem.targetX - currentItem.x) * 0.12;
-        currentItem.y += (currentItem.targetY - currentItem.y) * 0.12;
-      }
+      if (!isGameOver) {
+        if (!currentItem.isHeld) {
+          currentItem.x += (currentItem.targetX - currentItem.x) * 0.12;
+          currentItem.y += (currentItem.targetY - currentItem.y) * 0.12;
+        }
 
-      ctx.save();
-      // 그림자
-      ctx.shadowColor = 'rgba(0,0,0,0.22)';
-      ctx.shadowBlur = 18;
-      ctx.shadowOffsetY = 10;
-      
-      // 함정 아이템은 약간 주황/붉은 기운 테두리 살짝 가미
-      ctx.fillStyle = currentItem.isHeld ? '#FFFDE7' : '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(currentItem.x, currentItem.y, currentItem.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.lineWidth = currentItem.isHeld ? 8 : 5;
-      ctx.strokeStyle = currentItem.isHeld ? '#F59E0B' : (currentItem.isTrap ? '#FF7043' : '#CBD5E1');
-      ctx.stroke();
-      ctx.restore();
-
-      // [실물 그래픽 렌더링]: 이모지 대신 실물 느낌의 캔버스 일러스트 드로잉
-      drawRealisticItem(ctx, currentItem.x, currentItem.y - 12, currentItem.graphicId, currentItem.emoji);
-
-      // 이름표 텍스트 배경 캡슐 알약 (유아 시인성 대폭 강화: 22px -> 28px 확대 및 여백 확장)
-      ctx.save();
-      ctx.font = 'bold 28px "Jua", sans-serif';
-      const textWidth = ctx.measureText(currentItem.name).width;
-      const tagW = textWidth + 34;
-      const tagH = 44;
-      const tagX = currentItem.x - tagW / 2;
-      const tagY = currentItem.y + 40;
-
-      ctx.fillStyle = currentItem.isTrap ? '#FFEBEE' : '#F8FAFC';
-      ctx.strokeStyle = currentItem.isTrap ? '#E53935' : '#475569';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.roundRect(tagX, tagY, tagW, tagH, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      // 이름표 글씨 (크고 선명하게 28px)
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = currentItem.isTrap ? '#B71C1C' : '#0F172A';
-      ctx.fillText(currentItem.name, currentItem.x, tagY + tagH / 2 + 1);
-      ctx.restore();
-
-      // (D) 손가락 포인터 (마법봉 별 커서)
-      if (pointer.visible) {
         ctx.save();
-        ctx.shadowColor = pointer.isGrabbing ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)';
-        ctx.shadowBlur = 15;
-
-        // 원형 후광
-        ctx.fillStyle = pointer.isGrabbing ? 'rgba(239, 68, 68, 0.85)' : 'rgba(251, 191, 36, 0.85)';
+        ctx.shadowColor = 'rgba(0,0,0,0.22)';
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 10;
+        
+        ctx.fillStyle = currentItem.isHeld ? '#FFFDE7' : '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, pointer.isGrabbing ? 20 : 26, 0, Math.PI * 2);
+        ctx.arc(currentItem.x, currentItem.y, currentItem.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#FFFFFF';
+
+        ctx.lineWidth = currentItem.isHeld ? 8 : 5;
+        ctx.strokeStyle = currentItem.isHeld ? '#F59E0B' : (currentItem.isTrap ? '#FF7043' : '#CBD5E1');
+        ctx.stroke();
+        ctx.restore();
+
+        // 실물 그래픽 렌더링
+        drawRealisticItem(ctx, currentItem.x, currentItem.y - 12, currentItem.graphicId, currentItem.emoji);
+
+        // 이름표 태그 캡슐 알약
+        ctx.save();
+        ctx.font = 'bold 28px "Jua", sans-serif';
+        const textWidth = ctx.measureText(currentItem.name).width;
+        const tagW = textWidth + 36;
+        const tagH = 46;
+        const tagX = currentItem.x - tagW / 2;
+        const tagY = currentItem.y + 42;
+
+        ctx.fillStyle = currentItem.isTrap ? '#FFEBEE' : '#F8FAFC';
+        ctx.strokeStyle = currentItem.isTrap ? '#E53935' : '#475569';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.roundRect(tagX, tagY, tagW, tagH, 23);
+        ctx.fill();
         ctx.stroke();
 
-        // 손가락 중심 심볼
-        ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(pointer.isGrabbing ? '✊' : '🖐️', pointer.x, pointer.y);
+        ctx.fillStyle = currentItem.isTrap ? '#B71C1C' : '#0F172A';
+        ctx.fillText(currentItem.name, currentItem.x, tagY + tagH / 2 + 1);
         ctx.restore();
       }
 
@@ -880,33 +978,28 @@
     }
 
     // ==========================================
-    // 6-1. 실물 모습을 닮은 벡터 일러스트레이터
+    // 5. 20종 전용 실물풍 캔버스 벡터 일러스트
     // ==========================================
     function drawRealisticItem(ctx, cx, cy, id, fallbackEmoji) {
       ctx.save();
       ctx.translate(cx, cy);
 
       switch(id) {
-        case 'pet_bottle': // 투명 페트병 (생수병)
-          // 병 본체 (투명 하늘빛)
+        case 'pet_bottle':
           ctx.fillStyle = '#E1F5FE';
           ctx.strokeStyle = '#29B6F6';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-22, -34, 44, 76, [8, 8, 14, 14]);
-          ctx.fill();
-          ctx.stroke();
-          // 병 목 & 파란 뚜껑
+          ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#0288D1';
           ctx.fillRect(-10, -45, 20, 11);
           ctx.fillStyle = '#B3E5FC';
           ctx.fillRect(-12, -37, 24, 4);
-          // 맑은 물 채움 & 굴절 하이라이트
           ctx.fillStyle = 'rgba(79, 195, 247, 0.45)';
           ctx.beginPath();
           ctx.roundRect(-19, -5, 38, 44, [0, 0, 11, 11]);
           ctx.fill();
-          // 물결 무늬 주름선
           ctx.strokeStyle = '#81D4FA';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
@@ -915,47 +1008,38 @@
           ctx.stroke();
           break;
 
-        case 'spicy_box': // 떡볶이 양념 밴 배달 플라스틱 용기 (함정)
-          // 찌개/떡볶이 배달 하얀 플라스틱 용기
+        case 'spicy_box':
           ctx.fillStyle = '#FFF8E1';
           ctx.strokeStyle = '#FFA726';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-36, -26, 72, 54, 10);
-          ctx.fill();
-          ctx.stroke();
-          // 뚜껑 패킹 날개
+          ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#FFE082';
           ctx.fillRect(-40, -29, 80, 7);
-          // 내부에 붉게 착색된 떡볶이 고추기름 얼룩
           ctx.fillStyle = '#E53935';
           ctx.beginPath();
           ctx.ellipse(-8, -4, 22, 14, 0.2, 0, Math.PI * 2);
           ctx.ellipse(14, 6, 14, 10, -0.1, 0, Math.PI * 2);
           ctx.fill();
-          // 국물 기름 튄 자국
           ctx.fillStyle = '#C62828';
           ctx.beginPath();
           ctx.arc(-22, 12, 4, 0, Math.PI * 2);
           ctx.arc(24, -12, 3.5, 0, Math.PI * 2);
           ctx.arc(6, -14, 3, 0, Math.PI * 2);
           ctx.fill();
-          // 주의 텍스트 뱃지
           ctx.font = 'bold 11px sans-serif';
           ctx.fillStyle = '#FFFFFF';
           ctx.fillText('양념오염', 0, 1);
           break;
 
-        case 'pizza_box': // 기름 묻은 피자박스 (함정)
-          // 골판지 피자 사각 박스
+        case 'pizza_box':
           ctx.fillStyle = '#D7CCC8';
           ctx.strokeStyle = '#8D6E63';
           ctx.lineWidth = 3.5;
           ctx.beginPath();
           ctx.roundRect(-38, -30, 76, 60, 6);
-          ctx.fill();
-          ctx.stroke();
-          // 빨간 피자 로고 원
+          ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#E53935';
           ctx.beginPath();
           ctx.arc(0, -6, 18, 0, Math.PI*2);
@@ -963,7 +1047,6 @@
           ctx.fillStyle = '#FFEB3B';
           ctx.font = 'bold 12px sans-serif';
           ctx.fillText('PIZZA', 0, -5);
-          // 진하게 스며든 노란 치즈 기름 얼룩
           ctx.fillStyle = 'rgba(255, 179, 0, 0.7)';
           ctx.beginPath();
           ctx.ellipse(-16, 12, 16, 9, -0.2, 0, Math.PI*2);
@@ -971,18 +1054,15 @@
           ctx.fill();
           break;
 
-        case 'box': // 택배 종이 상자
+        case 'box':
           ctx.fillStyle = '#C7A27C';
           ctx.strokeStyle = '#8D6E63';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-35, -28, 70, 56, 6);
-          ctx.fill();
-          ctx.stroke();
-          // 상단 갈색 박스테이프
+          ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#BCAAA4';
           ctx.fillRect(-7, -28, 14, 56);
-          // 배송 송장 스티커
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(10, -18, 18, 22);
           ctx.fillStyle = '#424242';
@@ -990,19 +1070,16 @@
           ctx.fillRect(12, -9, 10, 2);
           break;
 
-        case 'milk': // 우유팩
-          // 삼각형 지붕
+        case 'milk':
           ctx.fillStyle = '#E0F2FE';
           ctx.strokeStyle = '#0288D1';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(0, -42); ctx.lineTo(-24, -18); ctx.lineTo(24, -18); ctx.closePath();
           ctx.fill(); ctx.stroke();
-          // 몸통
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(-24, -18, 48, 56);
           ctx.strokeRect(-24, -18, 48, 56);
-          // 파란 우유 무늬 웨이브
           ctx.fillStyle = '#38BDF8';
           ctx.beginPath();
           ctx.arc(0, 10, 16, 0, Math.PI*2);
@@ -1012,25 +1089,21 @@
           ctx.fillText('우유', 0, 14);
           break;
 
-        case 'soda_can': // 탄산음료 캔
-          // 금속 은회색 몸체
+        case 'soda_can':
           ctx.fillStyle = '#EF4444';
           ctx.strokeStyle = '#94A3B8';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-22, -32, 44, 66, 8);
           ctx.fill(); ctx.stroke();
-          // 은색 캔 뚜껑 & 림
           ctx.fillStyle = '#CBD5E1';
           ctx.beginPath();
           ctx.ellipse(0, -32, 22, 6, 0, 0, Math.PI*2);
           ctx.fill(); ctx.stroke();
-          // 캔 뚜껑 오프너 고리
           ctx.fillStyle = '#64748B';
           ctx.beginPath();
           ctx.arc(0, -32, 4, 0, Math.PI*2);
           ctx.fill();
-          // 캔 찌그러짐 표현 라인
           ctx.strokeStyle = '#B91C1C';
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -1038,22 +1111,18 @@
           ctx.stroke();
           break;
 
-        case 'juice_bottle': // 주스 유리병
-          // 투명 초록 유리병
+        case 'juice_bottle':
           ctx.fillStyle = 'rgba(74, 222, 128, 0.45)';
           ctx.strokeStyle = '#15803D';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-20, -18, 40, 58, [6, 6, 12, 12]);
           ctx.fill(); ctx.stroke();
-          // 병목
           ctx.fillStyle = 'rgba(74, 222, 128, 0.6)';
           ctx.fillRect(-8, -38, 16, 20);
           ctx.strokeRect(-8, -38, 16, 20);
-          // 황금색 금속 뚜껑
           ctx.fillStyle = '#F59E0B';
           ctx.fillRect(-10, -42, 20, 7);
-          // 오렌지 주스 라벨
           ctx.fillStyle = '#FB923C';
           ctx.fillRect(-16, -2, 32, 24);
           ctx.fillStyle = '#FFFFFF';
@@ -1061,37 +1130,32 @@
           ctx.fillText('JUICE', 0, 13);
           break;
 
-        case 'dirty_tissue': // 사용한 콧물 휴지 (함정)
+        case 'dirty_tissue':
           ctx.fillStyle = '#F1F5F9';
           ctx.strokeStyle = '#94A3B8';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
-          // 구겨진 종이 뭉치 곡선
           ctx.moveTo(-24, -14);
           ctx.bezierCurveTo(-35, 10, -10, 32, 12, 24);
           ctx.bezierCurveTo(34, 18, 30, -15, 8, -25);
           ctx.bezierCurveTo(-10, -32, -20, -22, -24, -14);
           ctx.fill(); ctx.stroke();
-          // 더러운 얼룩 (연두/누런 콧물 얼룩)
           ctx.fillStyle = '#A3E635';
           ctx.beginPath();
           ctx.ellipse(-2, 2, 9, 6, 0.4, 0, Math.PI*2);
           ctx.fill();
           break;
 
-        case 'broken_ceramic': // 깨진 도자기 그릇 (함정)
+        case 'broken_ceramic':
           ctx.fillStyle = '#F8FAFC';
           ctx.strokeStyle = '#64748B';
           ctx.lineWidth = 3;
-          // 깨진 파편 조각 1
           ctx.beginPath();
           ctx.moveTo(-32, -10); ctx.lineTo(4, -30); ctx.lineTo(-4, 18); ctx.closePath();
           ctx.fill(); ctx.stroke();
-          // 깨진 파편 조각 2
           ctx.beginPath();
           ctx.moveTo(12, -26); ctx.lineTo(34, -2); ctx.lineTo(16, 24); ctx.lineTo(2, 6); ctx.closePath();
           ctx.fill(); ctx.stroke();
-          // 푸른 도자기 문양
           ctx.strokeStyle = '#1D4ED8';
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -1099,7 +1163,7 @@
           ctx.stroke();
           break;
 
-        case 'plastic_bag': // 비닐봉지
+        case 'plastic_bag':
           ctx.fillStyle = 'rgba(216, 180, 254, 0.65)';
           ctx.strokeStyle = '#9333EA';
           ctx.lineWidth = 2.8;
@@ -1114,7 +1178,6 @@
           ctx.lineTo(28, 26);
           ctx.closePath();
           ctx.fill(); ctx.stroke();
-          // 가운데 주름
           ctx.strokeStyle = '#C084FC';
           ctx.beginPath();
           ctx.moveTo(-8, 0); ctx.lineTo(-4, 20);
@@ -1122,20 +1185,18 @@
           ctx.stroke();
           break;
 
-        case 'newspaper': // 깨끗한 신문지
+        case 'newspaper':
           ctx.fillStyle = '#F8FAFC';
           ctx.strokeStyle = '#64748B';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-34, -26, 68, 52, 4);
           ctx.fill(); ctx.stroke();
-          // 신문 접힘 선
           ctx.strokeStyle = '#CBD5E1';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(0, -26); ctx.lineTo(0, 26);
           ctx.stroke();
-          // 신문 기사 텍스트 줄
           ctx.fillStyle = '#94A3B8';
           ctx.fillRect(-28, -18, 22, 5);
           ctx.fillRect(-28, -8, 22, 2.5);
@@ -1146,21 +1207,18 @@
           ctx.fillRect(6, 2, 22, 2.5);
           break;
 
-        case 'yogurt': // 요구르트병
+        case 'yogurt':
           ctx.fillStyle = '#FFE0B2';
           ctx.strokeStyle = '#FB8C00';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-18, -14, 36, 44, [4, 4, 12, 12]);
           ctx.fill(); ctx.stroke();
-          // 좁은 병목
           ctx.fillStyle = '#FFE0B2';
           ctx.fillRect(-12, -28, 24, 14);
           ctx.strokeRect(-12, -28, 24, 14);
-          // 알루미늄 뚜껑 호일
           ctx.fillStyle = '#E53935';
           ctx.fillRect(-14, -32, 28, 6);
-          // 주황 띠 라벨
           ctx.fillStyle = '#FF9800';
           ctx.fillRect(-16, 0, 32, 14);
           ctx.fillStyle = '#FFFFFF';
@@ -1168,22 +1226,19 @@
           ctx.fillText('요구르트', 0, 9);
           break;
 
-        case 'shampoo': // 샴푸통
+        case 'shampoo':
           ctx.fillStyle = '#E0F7FA';
           ctx.strokeStyle = '#00ACC1';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-22, -20, 44, 56, 12);
           ctx.fill(); ctx.stroke();
-          // 펌프 목
           ctx.fillStyle = '#B2EBF2';
           ctx.fillRect(-6, -32, 12, 12);
-          // 펌프 머리 노즐
           ctx.fillStyle = '#00838F';
           ctx.beginPath();
           ctx.roundRect(-16, -38, 26, 8, 4);
           ctx.fill();
-          // 거품 방울 일러스트
           ctx.fillStyle = 'rgba(255,255,255,0.8)';
           ctx.beginPath();
           ctx.arc(-6, 2, 6, 0, Math.PI*2);
@@ -1191,19 +1246,17 @@
           ctx.fill();
           break;
 
-        case 'tuna_can': // 참치캔
+        case 'tuna_can':
           ctx.fillStyle = '#ECEFF1';
           ctx.strokeStyle = '#78909C';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-28, -12, 56, 36, 8);
           ctx.fill(); ctx.stroke();
-          // 윗면 은색 테두리
           ctx.fillStyle = '#CFD8DC';
           ctx.beginPath();
           ctx.ellipse(0, -12, 28, 8, 0, 0, Math.PI*2);
           ctx.fill(); ctx.stroke();
-          // 참치 라벨 (파랑/노랑)
           ctx.fillStyle = '#1E88E5';
           ctx.fillRect(-26, -2, 52, 18);
           ctx.fillStyle = '#FFEB3B';
@@ -1211,19 +1264,17 @@
           ctx.fillText('참치', 0, 11);
           break;
 
-        case 'food_can': // 옥수수 통조림 캔
+        case 'food_can':
           ctx.fillStyle = '#FFF9C4';
           ctx.strokeStyle = '#FBC02D';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-22, -26, 44, 58, 6);
           ctx.fill(); ctx.stroke();
-          // 상단/하단 은색 림
           ctx.fillStyle = '#CFD8DC';
           ctx.beginPath();
           ctx.ellipse(0, -26, 22, 6, 0, 0, Math.PI*2);
           ctx.fill(); ctx.stroke();
-          // 노란 옥수수 알맹이 무늬
           ctx.fillStyle = '#F57F17';
           ctx.beginPath();
           ctx.arc(-8, 4, 4, 0, Math.PI*2);
@@ -1232,52 +1283,47 @@
           ctx.fill();
           break;
 
-        case 'jam_jar': // 딸기 잼 유리병
+        case 'jam_jar':
           ctx.fillStyle = 'rgba(255, 235, 238, 0.6)';
           ctx.strokeStyle = '#E57373';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-24, -18, 48, 50, 10);
           ctx.fill(); ctx.stroke();
-          // 빨간 딸기잼 내용물
           ctx.fillStyle = '#E53935';
           ctx.beginPath();
           ctx.roundRect(-20, -6, 40, 34, [0, 0, 8, 8]);
           ctx.fill();
-          // 체크무늬 뚜껑
           ctx.fillStyle = '#D32F2F';
           ctx.beginPath();
           ctx.roundRect(-22, -28, 44, 12, 4);
           ctx.fill();
           break;
 
-        case 'baby_food': // 이유식 유리병
+        case 'baby_food':
           ctx.fillStyle = 'rgba(238, 242, 246, 0.7)';
           ctx.strokeStyle = '#64748B';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(-20, -14, 40, 42, 8);
           ctx.fill(); ctx.stroke();
-          // 노란 당근/단호박 죽 내용물
           ctx.fillStyle = '#FFA726';
           ctx.beginPath();
           ctx.roundRect(-16, -2, 32, 26, [0, 0, 6, 6]);
           ctx.fill();
-          // 하늘색 뚜껑
           ctx.fillStyle = '#4FC3F7';
           ctx.beginPath();
           ctx.roundRect(-18, -22, 36, 10, 4);
           ctx.fill();
           break;
 
-        case 'bubble_wrap': // 뽁뽁이 완충재
+        case 'bubble_wrap':
           ctx.fillStyle = 'rgba(224, 242, 254, 0.55)';
           ctx.strokeStyle = '#38BDF8';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.roundRect(-30, -26, 60, 52, 6);
           ctx.fill(); ctx.stroke();
-          // 올록볼록 동그란 공기 방울들
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.strokeStyle = '#0288D1';
           ctx.lineWidth = 1.5;
@@ -1293,50 +1339,45 @@
           });
           break;
 
-        case 'bread_bag': // 빵 포장 비닐
+        case 'bread_bag':
           ctx.fillStyle = 'rgba(255, 248, 225, 0.65)';
           ctx.strokeStyle = '#FFB300';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.roundRect(-26, -22, 52, 54, 8);
           ctx.fill(); ctx.stroke();
-          // 금색 빵철사(클립)
           ctx.fillStyle = '#F57F17';
           ctx.beginPath();
           ctx.roundRect(-8, -30, 16, 9, 3);
           ctx.fill();
-          // 안에 비치는 갈색 식빵
           ctx.fillStyle = '#D7CCC8';
           ctx.beginPath();
           ctx.roundRect(-16, -10, 32, 34, 6);
           ctx.fill();
           break;
 
-        case 'snack_bag': // 과자 부스러기 비닐 (함정)
+        case 'snack_bag':
           ctx.fillStyle = '#FF7043';
           ctx.strokeStyle = '#D84315';
           ctx.lineWidth = 3;
           ctx.beginPath();
-          // 뜯겨진 지그재그 모양의 과자 봉지
           ctx.moveTo(-28, -20);
           ctx.lineTo(-14, -26); ctx.lineTo(0, -20); ctx.lineTo(14, -26); ctx.lineTo(28, -20);
           ctx.lineTo(24, 26); ctx.lineTo(-24, 26);
           ctx.closePath();
           ctx.fill(); ctx.stroke();
-          // 과자 부스러기 및 기름 가루 얼룩
           ctx.fillStyle = '#FFD54F';
           ctx.beginPath();
           ctx.arc(-8, 2, 4, 0, Math.PI*2);
           ctx.arc(8, 8, 3.5, 0, Math.PI*2);
           ctx.arc(-4, 14, 3, 0, Math.PI*2);
           ctx.fill();
-          // 오염 경고 텍스트
           ctx.fillStyle = '#FFFFFF';
           ctx.font = 'bold 11px sans-serif';
           ctx.fillText('기름/가루', 0, -4);
           break;
 
-        default: // 기타 기본 아이템 (고해상도 이모지 폴백)
+        default:
           ctx.font = '76px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -1348,28 +1389,30 @@
     }
 
     // ==========================================
-    // 7. 컨트롤 버튼 이벤트
+    // 6. 컨트롤 버튼 & 모드 전환 이벤트
     // ==========================================
-    document.getElementById('activate-cam-btn').addEventListener('click', () => {
+    modePracticeBtn.addEventListener('click', () => {
       initAudio();
-      startCamera();
+      setMode('practice');
     });
 
-    document.getElementById('use-mouse-btn').addEventListener('click', () => {
+    modeChallengeBtn.addEventListener('click', () => {
       initAudio();
-      camGuideOverlay.style.opacity = '0';
-      setTimeout(() => camGuideOverlay.classList.add('hidden'), 300);
-      modeBadge.textContent = "마우스 / 스마트보드 터치 모드 🖱️";
-      modeDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-sky-500";
+      setMode('challenge');
     });
 
-    document.getElementById('camera-toggle-btn').addEventListener('click', () => {
+    startChallengeRunBtn.addEventListener('click', () => {
+      startChallengeActual();
+    });
+
+    retryChallengeBtn.addEventListener('click', () => {
       initAudio();
-      if (cameraActive) {
-        stopCamera();
-      } else {
-        startCamera();
-      }
+      setMode('challenge');
+    });
+
+    switchToPracticeBtn.addEventListener('click', () => {
+      initAudio();
+      setMode('practice');
     });
 
     document.getElementById('sound-btn').addEventListener('click', () => {
@@ -1378,16 +1421,14 @@
       if (isSoundOn) playSound('grab');
     });
 
-    // 다시 시작(새로고침) 버튼 클릭 이벤트
     document.getElementById('reset-game-btn').addEventListener('click', () => {
       initAudio();
       restartGame();
     });
 
-    // 시작
     window.onload = () => {
-      spawnNextItem();
-      renderLoop();
+      setMode('practice');
+      requestAnimationFrame(renderLoop);
     };
   </script>
 </body>
